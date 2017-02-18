@@ -26,7 +26,7 @@ PROC *kfork(char *filename)
       
     if (filename) {
         int i;
-        u16 new_proc_segment = (p->pid + 5) * 0x1000;
+        u16 new_proc_segment = (p->pid + 1) * 0x1000;
         load(filename, new_proc_segment);
 
         //Fabricate stack contents
@@ -51,6 +51,40 @@ PROC *kfork(char *filename)
     } 
     return p;
 }         
+
+PROC *exec(char *filename)
+{
+      PROC *p = running
+      
+    if (filename) {
+        int i;
+        u16 new_proc_segment = (p->pid + 1) * 0x1000;
+        load(filename, new_proc_segment);
+
+        //Fabricate stack contents
+        p->uss = new_proc_segment;
+        p->usp = 0x1000 - 24;
+        //First up are ES and DS, which are the same as the PROC segment
+
+
+        put_word(new_proc_segment, p->uss, p->usp);
+        put_word(new_proc_segment, p->uss, p->usp + 2);
+
+        //di, si, bp, dx, cx, bx, ax, PC = 0, 7 CPU Registers + PC
+        for(i = 2; i < 10; i++) {
+            put_word(0, p->uss, p->usp + (i * 2));
+        }
+        
+        //CS = proc segment
+        put_word(new_proc_segment, p->uss, p->usp + 20);
+
+        //Finally, flag
+        put_word(0x2000, p->uss, p->usp + 22);
+    } 
+    return p;
+}         
+
+
 
 int do_sleep()
 {
